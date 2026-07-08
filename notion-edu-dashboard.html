@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notion 교육 데일리 만족도 대시보드</title>
+<style>
+  :root{
+    --text:#2C2C2B; --text2:#7D7A75; --canvas:#FFFFFF; --soft:#F9F8F7;
+    --soft2:#F0EFED; --border:#E6E5E3;
+    --blue:#2783DE; --blue-soft:#E5F2FC;
+    --green:#46A171; --green-soft:#E8F1EC;
+    --orange:#D5803B; --orange-soft:#FBEBDE;
+    --red:#E56458; --red-soft:#FCE9E7;
+    --gold:#EAC26B; --purple:#BF8EDA;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Roboto,sans-serif;
+    color:var(--text); background:var(--soft); line-height:1.5;
+    -webkit-font-smoothing:antialiased; padding:24px 16px 40px;
+  }
+  .wrap{max-width:1120px;margin:0 auto}
+  .head{margin-bottom:24px}
+  .eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;
+    color:var(--blue);background:var(--blue-soft);padding:4px 10px;border-radius:999px;margin-bottom:12px}
+  h1{font-size:28px;line-height:1.25;letter-spacing:-0.4px;margin-bottom:6px}
+  .sub{color:var(--text2);font-size:15px}
+  /* segmented control */
+  .seg{display:inline-flex;background:var(--soft2);border:1px solid var(--border);
+    border-radius:10px;padding:4px;gap:2px;margin:20px 0 8px}
+  .seg button{border:0;background:transparent;color:var(--text2);font-size:14px;font-weight:600;
+    padding:8px 18px;border-radius:7px;cursor:pointer;min-height:40px;font-family:inherit;transition:.15s}
+  .seg button.active{background:var(--canvas);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .scope-note{font-size:13px;color:var(--text2);margin-bottom:20px}
+  /* kpi */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+  .card{background:var(--canvas);border:1px solid var(--border);border-radius:12px;padding:18px}
+  .kpi .label{font-size:13px;color:var(--text2);font-weight:500;margin-bottom:8px}
+  .kpi .val{font-size:30px;font-weight:700;letter-spacing:-0.5px;line-height:1}
+  .kpi .val small{font-size:15px;color:var(--text2);font-weight:500}
+  .kpi .delta{font-size:12px;font-weight:600;margin-top:8px;display:inline-block}
+  .up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--text2)}
+  /* grid */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .panel-title{font-size:15px;font-weight:700;margin-bottom:2px}
+  .panel-desc{font-size:12.5px;color:var(--text2);margin-bottom:16px}
+  /* donut */
+  .donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .donut{position:relative;width:150px;height:150px;flex:none}
+  .donut .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .donut .center b{font-size:26px;font-weight:700;line-height:1}
+  .donut .center span{font-size:11px;color:var(--text2);margin-top:2px}
+  .legend{display:flex;flex-direction:column;gap:8px;flex:1;min-width:150px}
+  .legend .row{display:flex;align-items:center;font-size:13px;gap:8px}
+  .legend .dot{width:11px;height:11px;border-radius:3px;flex:none}
+  .legend .nm{flex:1}
+  .legend .ct{font-weight:600;font-variant-numeric:tabular-nums}
+  .legend .pc{color:var(--text2);width:44px;text-align:right;font-variant-numeric:tabular-nums}
+  /* bars */
+  .bars{display:flex;flex-direction:column;gap:12px}
+  .bar-row{display:grid;grid-template-columns:92px 1fr 40px;align-items:center;gap:10px;font-size:13px}
+  .bar-track{background:var(--soft2);border-radius:6px;height:22px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:6px;transition:width .5s cubic-bezier(.2,.7,.2,1);min-width:2px}
+  .bar-row .lbl{color:var(--text2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar-row .num{font-weight:600;font-variant-numeric:tabular-nums}
+  /* day compare */
+  .cmp{display:flex;gap:14px}
+  .cmp .c{flex:1;background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+  .cmp .c .d{font-size:12px;color:var(--text2);font-weight:600;margin-bottom:8px}
+  .cmp .c .score{font-size:28px;font-weight:700;line-height:1}
+  .cmp .c .score small{font-size:13px;color:var(--text2);font-weight:500}
+  .cmp .c .meter{height:6px;background:var(--soft2);border-radius:4px;margin-top:12px;overflow:hidden}
+  .cmp .c .meter i{display:block;height:100%;border-radius:4px}
+  .cmp .c .note{font-size:11.5px;color:var(--text2);margin-top:8px}
+  /* feedback */
+  .fb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .fb-list{display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto;padding-right:4px}
+  .quote{border-left:3px solid var(--border);padding:8px 12px;background:var(--soft);border-radius:0 8px 8px 0;font-size:13px}
+  .quote.pos{border-left-color:var(--green)}
+  .quote.neg{border-left-color:var(--orange)}
+  .quote .who{font-size:11px;color:var(--text2);margin-top:5px;font-weight:600}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:5px;margin-bottom:6px}
+  .tag.pos{background:var(--green-soft);color:var(--green)}
+  .tag.neg{background:var(--orange-soft);color:var(--orange)}
+  .empty{font-size:13px;color:var(--text2);padding:20px;text-align:center}
+  /* insights */
+  .ins{background:linear-gradient(135deg,#F4F9FE,#FBFCFD);border:1px solid var(--border)}
+  .ins ul{list-style:none;display:flex;flex-direction:column;gap:12px}
+  .ins li{display:flex;gap:10px;font-size:13.5px;align-items:flex-start}
+  .ins .ic{width:22px;height:22px;border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:1px}
+  .foot{text-align:center;color:var(--text2);font-size:12px;margin-top:24px}
+  @media(max-width:720px){
+    body{padding:16px 12px 32px}
+    h1{font-size:22px}
+    .kpis{grid-template-columns:1fr 1fr;gap:10px}
+    .grid,.fb-grid{grid-template-columns:1fr}
+    .kpi .val{font-size:26px}
+    .cmp{flex-direction:column}
+    .seg button{padding:8px 14px}
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--text:#FFFFFF;--text2:rgba(255,255,255,.65);--canvas:#202020;--soft:#191919;
+      --soft2:#383836;--border:rgba(255,255,255,.20);--blue-soft:rgba(94,159,232,.14);
+      --green-soft:rgba(114,188,143,.14);--orange-soft:rgba(222,146,85,.14);--red-soft:rgba(233,115,102,.14);
+      --blue:#5E9FE8;--green:#72BC8F;--orange:#DE9255;--red:#E97366;--gold:#EAC26B}
+    .ins{background:#202020}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <span class="eyebrow">⚡ 데일리 만족도 리포트</span>
+    <h1>2026 하계 직무교육 — Notion 교육 만족도</h1>
+    <p class="sub">Day 1 · Day 2 데일리 설문 응답 <b>41건</b> 기준 · 동국대학교 재무팀<br><span style="font-size:13px;color:var(--text2)">🕒 기준 시각 2026-07-08 11:33 (KST) · Day 3(해커톤)은 응답 대기 중</span></p>
+  </div>
+
+  <div class="seg" id="seg">
+    <button data-scope="all" class="active">전체</button>
+    <button data-scope="1">Day 1 · 기본기·DB</button>
+    <button data-scope="2">Day 2 · AI·스킬</button>
+    <button data-scope="3">Day 3 · 해커톤</button>
+  </div>
+  <div class="scope-note" id="scopeNote"></div>
+
+  <!-- KPIs -->
+  <div class="kpis" id="kpis"></div>
+
+  <!-- Row 1: donut + day compare -->
+  <div class="grid">
+    <div class="card">
+      <div class="panel-title">만족도 분포</div>
+      <div class="panel-desc">오늘 교육 전반 만족도 응답 비율</div>
+      <div class="donut-wrap">
+        <div class="donut"><svg id="donut" viewBox="0 0 42 42"></svg>
+          <div class="center"><b id="donutPct">–</b><span>만족 이상</span></div>
+        </div>
+        <div class="legend" id="satLegend"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="panel-title">Day별 만족도 비교</div>
+      <div class="panel-desc">평균 점수(5점 만점) · 만족 이상 비율</div>
+      <div class="cmp" id="cmp"></div>
+    </div>
+  </div>
+
+  <!-- Row 2: difficulty + pace -->
+  <div class="grid">
+    <div class="card">
+      <div class="panel-title">난이도 분포</div>
+      <div class="panel-desc">오늘 교육 난이도 체감</div>
+      <div class="bars" id="diffBars"></div>
+    </div>
+    <div class="card">
+      <div class="panel-title">진행 속도 분포</div>
+      <div class="panel-desc">오늘 교육 진행 속도 체감</div>
+      <div class="bars" id="paceBars"></div>
+    </div>
+  </div>
+
+  <!-- Feedback -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="panel-title">주요 피드백</div>
+    <div class="panel-desc">응답자가 직접 남긴 좋았던 점 / 개선 의견</div>
+    <div class="fb-grid">
+      <div>
+        <span class="tag pos">👍 좋았던 점</span>
+        <div class="fb-list" id="posList"></div>
+      </div>
+      <div>
+        <span class="tag neg">🛠 개선 의견</span>
+        <div class="fb-list" id="negList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Insights -->
+  <div class="card ins">
+    <div class="panel-title">핵심 인사이트</div>
+    <div class="panel-desc">전체 응답 종합</div>
+    <ul>
+      <li><span class="ic" style="background:var(--green-soft);color:var(--green)">✓</span>
+        <div><b>전반 만족도 4.0/5, 만족 이상 78%.</b> 첫 실습형 Notion 교육에 대한 반응은 전반적으로 긍정적입니다.</div></li>
+      <li><span class="ic" style="background:var(--red-soft);color:var(--red)">▼</span>
+        <div><b>Day 2에서 만족도가 4.25 → 3.71로 하락.</b> AI·스킬·에이전트 세션의 난이도 상승과 강사 준비·진행 속도에 대한 지적이 늘었습니다.</div></li>
+      <li><span class="ic" style="background:var(--orange-soft);color:var(--orange)">!</span>
+        <div><b>진행 속도 “약간 빠름” 이상이 절반(49%).</b> 특히 Day 2는 화면 전환·실습 속도를 따라가기 어렵다는 의견이 반복됐습니다.</div></li>
+      <li><span class="ic" style="background:var(--blue-soft);color:var(--blue)">→</span>
+        <div><b>가장 호평 받은 것은 “함께 해보는 실습”.</b> DB 연동·워크스페이스 구축·AI 스킬 만들기 등 핸즈온 세션이 높은 평가를 받았습니다.</div></li>
+    </ul>
+  </div>
+
+  <div class="foot">데이터 출처: “2026 하계 직무교육 — Notion 교육 데일리 만족도” · 응답 41건 (Day 1 24건 · Day 2 17건 · Day 3 0건) · 기준 시각 2026-07-08 11:33 (KST)</div>
+</div>
+
+<script>
+const DATA = [
+{n:1,nm:"오승훈",d:1,s:"매우 만족",df:"적절함",p:"딱 적절함"},
+{n:2,nm:"서주한",d:1,s:"매우 만족",df:"매우 쉬움",p:"딱 적절함",pos:"노션 기초교육 만족 / 기본 프로그램 운�� 방식 교육"},
+{n:3,nm:"한윤수",d:1,s:"매우 만족",df:"적절함",p:"딱 적절함",pos:"강사의 전문성·강의력이 좋았음 (워크스페이스 개설)"},
+{n:4,nm:"하정수",d:1,s:"만족",df:"쉬움",p:"딱 적절함",pos:"첫 사용인데 적절했고, AI 활용 범위를 알 수 있어 좋았습니다."},
+{n:5,nm:null,d:1,s:"만족",df:"적절함",p:"약간 빠름"},
+{n:6,nm:"위희정",d:1,s:"만족",df:"적절함",p:"약간 빠름",pos:"속도감은 좀 빠르나 실무적인 내용"},
+{n:7,nm:null,d:1,s:"매우 만족",df:"적절함",p:"약간 빠름",pos:"노션 기본 구성을 한 단계씩 실습할 수 있어 좋았음 (회의록·DB 생성)"},
+{n:8,nm:"이상구",d:1,s:"매우 만족",df:"적절함",p:"딱 적절함",pos:"AI로 만들던 페이지를 기초부터 배워 좋았고, AI 활용을 더 효율적으로 할 기대 (업무·프로젝트 DB 연동)"},
+{n:9,nm:null,d:1,s:"만족",df:"적절함",p:"딱 적절함",pos:"새 툴 활용법 입문 기회 (팀 프로젝트 실습)",neg:"팀 프로젝트 실습 시 일부 부서가 설정되어 있지 않은 점은 아쉬웠습니다."},
+{n:10,nm:"이수호",d:1,s:"만족",df:"적절함",p:"딱 적절함",pos:"친절하고 상세하게 설명해주셔서 좋았습니다. (페이지 연결 세션)"},
+{n:11,nm:null,d:1,s:"만족",df:"적절함",p:"딱 적절함"},
+{n:12,nm:null,d:1,s:"보통",df:"적절함",p:"딱 적절함",neg:"실무 바로 적용할 수 있는 AI 활용도 부분 내용이 부족"},
+{n:13,nm:null,d:1,s:"매우 만족",df:"적절함",p:"딱 적절함"},
+{n:14,nm:null,d:1,s:"만족",df:"적절함",p:"약간 빠름"},
+{n:15,nm:"이석호",d:1,s:"만족",df:"적절함",p:"약간 빠름",pos:"처음인데 블록 등 가장 기초 개념부터 배워 좋았습니다. (DB 구축)"},
+{n:16,nm:null,d:1,s:"만족",df:"적절함",p:"딱 적절함"},
+{n:17,nm:"손유리",d:1,s:"만족",df:"어려움",p:"약간 빠름"},
+{n:18,nm:null,d:1,s:"만족",df:"적절함",p:"약간 빠름",pos:"전반적으로 만족",neg:"복습용 간단한 매뉴얼이 있으면 좋겠고, 노션을 왜/언제 써야 하는지는 아직 모르겠습니다."},
+{n:19,nm:null,d:1,s:"매우 만족",df:"적절함",p:"딱 적절함",pos:"팀스페이스 만들기"},
+{n:20,nm:"김은비",d:1,s:"만족",df:"적절함",p:"딱 적절함",pos:"알기 쉽게 설명 (노션 사용법 전반)"},
+{n:21,nm:"이경재",d:1,s:"만족",df:"적절함",p:"딱 적절함"},
+{n:22,nm:null,d:1,s:"보통",df:"적절함",p:"약간 빠름",pos:"툴에 대한 이해"},
+{n:23,nm:"이서우",d:1,s:"매우 만족",df:"적절함",p:"약간 빠름",pos:"강의력이 좋고 가입·팀스페이스·페이지 개설 등 기초를 세세히 알려줘 좋았음 (회의록 댓글)",neg:"아직 기초라 실무 적용을 어떻게 할지는 감이 안 잡혔습니다."},
+{n:24,nm:null,d:1,s:"만족",df:"적절함",p:"약간 빠름"},
+{n:25,nm:"오승훈",d:2,s:"만족",df:"적절함",p:"딱 적절함"},
+{n:26,nm:"위희정",d:2,s:"불만족",df:"적절함",p:"약간 빠름",neg:"강사의 강의자료 준비·확인 부족"},
+{n:27,nm:"하정수",d:2,s:"만족",df:"쉬움",p:"약간 느림",pos:"대학 환경 커스터마이징 적용 방안을 생각하게 지침 설정을 설명해준 부분이 좋았습니다."},
+{n:28,nm:"이서우",d:2,s:"보통",df:"어려움",p:"약간 빠름",pos:"AI 활용 템플릿 만들기",neg:"강의 준비가 부족했던 것 같습니다. 버벅이거나 점검 시간이 길었어요. 강의력 보완 필요."},
+{n:29,nm:"이희경",d:2,s:"만족",df:"쉬움",p:"약간 빠름",pos:"노션 운영 방법을 같이 해보며 설명 들으니 좋았음"},
+{n:30,nm:null,d:2,s:"불만족",df:"어려움",p:"너무 빠름",neg:"너무 빨라서 따라가기가 힘들었습니다"},
+{n:31,nm:null,d:2,s:"만족",df:"어려움",p:"약간 빠름"},
+{n:32,nm:null,d:2,s:"매우 만족",df:"어려움",p:"딱 적절함"},
+{n:33,nm:null,d:2,s:"매우 만족",df:"적절함",p:"딱 적절함",pos:"유즈케이스 공유 / 스킬 생성"},
+{n:34,nm:"이수호",d:2,s:"보통",df:"적절함",p:"약간 빠름",pos:"스킬을 설정해 원하는 아웃라인을 만들어보는 부분",neg:"지난번 교육과 조금 더 연계해서 활용했으면 좋았을 것 같다."},
+{n:35,nm:null,d:2,s:"만족",df:"적절함",p:"약간 빠름",neg:"처음 접하는 사람도 잘 따라오게 더 차근차근, 화면·메뉴 전환 시 놓친 부분이 있었습니다."},
+{n:36,nm:"김종애",d:2,s:"보통",df:"어려움",p:"약간 빠름"},
+{n:37,nm:"이경재",d:2,s:"매우 만족",df:"적절함",p:"딱 적절함"},
+{n:38,nm:null,d:2,s:"보통",df:"적절함",p:"딱 적절함"},
+{n:39,nm:"손유리",d:2,s:"만족",df:"적절함",p:"딱 적절함"},
+{n:40,nm:"김은비",d:2,s:"보통",df:"어려움",p:"약간 빠름",neg:"어려웠어요… 교육자의 준비성 부족"},
+{n:41,nm:"이석호",d:2,s:"매우 만족",df:"적절함",p:"약간 빠름",pos:"실질적으로 AI 스킬 구축·실습하는 시간이 유익했습니다 (템플릿 설���)"}
+];
+
+const SAT=["매우 만족","만족","보통","불만족","매우 불만족"];
+const SAT_SCORE={"매우 만족":5,"만족":4,"보통":3,"불만족":2,"매우 불만족":1};
+const SAT_COLOR={"매우 만족":"var(--green)","만족":"var(--blue)","보통":"var(--gold)","불만족":"var(--orange)","매우 불만족":"var(--red)"};
+const DIFF=["매우 쉬움","쉬움","적절함","어려움","매우 어려움"];
+const DIFF_COLOR={"매우 쉬움":"var(--blue)","쉬움":"var(--green)","적절함":"var(--gold)","어려움":"var(--orange)","매우 어려움":"var(--red)"};
+const PACE=["너무 느림","약간 느림","딱 적절함","약간 빠름","너무 빠름"];
+const PACE_COLOR={"너무 느림":"var(--purple)","약간 느림":"var(--blue)","딱 적절함":"var(--green)","약간 빠름":"var(--orange)","너무 빠름":"var(--red)"};
+
+function avg(rows){return rows.reduce((a,r)=>a+SAT_SCORE[r.s],0)/rows.length}
+function satHigh(rows){return rows.filter(r=>r.s==="매우 만족"||r.s==="만족").length}
+function count(rows,key,val){return rows.filter(r=>r[key]===val).length}
+
+let scope="all";
+function rowsFor(sc){return sc==="all"?DATA:DATA.filter(r=>String(r.d)===String(sc))}
+
+function render(){
+  const rows=rowsFor(scope);
+  const N=rows.length;
+
+  document.getElementById("scopeNote").textContent =
+    scope==="all" ? "전체 응답 41건 (Day 1 24건 · Day 2 17건 · Day 3 0건)을 종합해 보여줍니다. (기준 2026-07-08 11:33 KST)"
+    : scope==="1" ? "Day 1 — Notion 기본기·DB 입문 · 응답 24건"
+    : scope==="2" ? "Day 2 — 노션AI/스킬/에이전트 · 응답 17건"
+    : "Day 3 — 해커톤 · 아직 접수된 응답이 없습니다. (기준 2026-07-08 11:33 KST)";
+
+  renderCmp();
+
+  if(N===0){
+    document.getElementById("kpis").innerHTML=`<div class="card kpi" style="grid-column:1/-1"><div class="label">응답 대기 중</div><div class="val">0<small> 건</small></div><div class="delta flat">Day 3(해커톤) 설문 응답이 아직 접수되지 않았습니다.</div></div>`;
+    document.getElementById("donut").innerHTML="";
+    document.getElementById("donutPct").textContent="–";
+    document.getElementById("satLegend").innerHTML=`<div class="empty">표시할 데이터가 없습니다.</div>`;
+    document.getElementById("diffBars").innerHTML=`<div class="empty">표시할 데이터가 없습니다.</div>`;
+    document.getElementById("paceBars").innerHTML=`<div class="empty">표시할 데이터가 없습니다.</div>`;
+    document.getElementById("posList").innerHTML=`<div class="empty">표시할 의견이 없습니다.</div>`;
+    document.getElementById("negList").innerHTML=`<div class="empty">표시할 의견이 없습니다.</div>`;
+    return;
+  }
+
+  const a=avg(rows), hi=satHigh(rows), hiPct=Math.round(hi/N*100);
+  const named=rows.filter(r=>r.nm).length;
+
+  // KPIs
+  const paceFast = count(rows,"p","약간 빠름")+count(rows,"p","너무 빠름");
+  const kpis=[
+    {label:"총 응답 수",val:N+"<small> 건</small>",delta:`실명 ${named} · 익명 ${N-named}`,cls:"flat"},
+    {label:"전반 만족도 평균",val:a.toFixed(2)+"<small> /5</small>",delta:deltaVsAll(a,"avg"),cls:deltaCls(a,"avg")},
+    {label:"만족 이상 비율",val:hiPct+"<small>%</small>",delta:`${hi} / ${N} 명`,cls:"flat"},
+    {label:"속도 ‘빠름’ 응답",val:Math.round(paceFast/N*100)+"<small>%</small>",delta:`${paceFast} / ${N} 명`,cls:paceFast/N>0.4?"down":"flat"}
+  ];
+  document.getElementById("kpis").innerHTML=kpis.map(k=>
+    `<div class="card kpi"><div class="label">${k.label}</div><div class="val">${k.val}</div><div class="delta ${k.cls}">${k.delta}</div></div>`).join("");
+
+  // Donut (satisfaction)
+  const svg=document.getElementById("donut"); svg.innerHTML="";
+  let off=25; const R=15.915;
+  SAT.forEach(s=>{
+    const c=count(rows,"s",s); if(!c)return;
+    const pct=c/N*100;
+    const circ=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    circ.setAttribute("cx",21);circ.setAttribute("cy",21);circ.setAttribute("r",R);
+    circ.setAttribute("fill","transparent");
+    circ.setAttribute("stroke",SAT_COLOR[s]);
+    circ.setAttribute("stroke-width",6);
+    circ.setAttribute("stroke-dasharray",`${pct} ${100-pct}`);
+    circ.setAttribute("stroke-dashoffset",off);
+    circ.setAttribute("transform","rotate(-90 21 21)");
+    svg.appendChild(circ);
+    off -= pct;
+  });
+  document.getElementById("donutPct").textContent=hiPct+"%";
+  document.getElementById("satLegend").innerHTML=SAT.map(s=>{
+    const c=count(rows,"s",s); if(!c)return"";
+    return `<div class="row"><span class="dot" style="background:${SAT_COLOR[s]}"></span><span class="nm">${s}</span><span class="ct">${c}</span><span class="pc">${Math.round(c/N*100)}%</span></div>`;
+  }).join("");
+
+  // Difficulty bars
+  drawBars("diffBars",rows,DIFF,"df",DIFF_COLOR);
+  // Pace bars
+  drawBars("paceBars",rows,PACE,"p",PACE_COLOR);
+
+  // Feedback
+  const pos=rows.filter(r=>r.pos).map(r=>({t:r.pos,who:label(r)}));
+  const neg=rows.filter(r=>r.neg).map(r=>({t:r.neg,who:label(r)}));
+  document.getElementById("posList").innerHTML = pos.length?pos.map(q=>quote(q,"pos")).join(""):`<div class="empty">표시할 의견이 없습니다.</div>`;
+  document.getElementById("negList").innerHTML = neg.length?neg.map(q=>quote(q,"neg")).join(""):`<div class="empty">표시할 의견이 없습니다.</div>`;
+}
+
+function label(r){const day="Day "+r.d; return (r.nm?r.nm:"익명")+" · "+day+" · #"+r.n;}
+function quote(q,cls){return `<div class="quote ${cls}">${q.t}<div class="who">${q.who}</div></div>`;}
+
+function renderCmp(){
+  const d1=rowsFor("1"), d2=rowsFor("2");
+  const cmpData=[{d:"Day 1 · 기본기·DB",rows:d1,col:"var(--blue)"},{d:"Day 2 · AI·스킬",rows:d2,col:"var(--purple)"}];
+  document.getElementById("cmp").innerHTML=cmpData.map(c=>{
+    const av=avg(c.rows), h=Math.round(satHigh(c.rows)/c.rows.length*100);
+    const active = (scope!=="all" && ((scope==="1"&&c.d.startsWith("Day 1"))||(scope==="2"&&c.d.startsWith("Day 2"))));
+    return `<div class="c" style="${active?'border-color:'+c.col+';border-width:2px':''}"><div class="d">${c.d}</div>
+      <div class="score">${av.toFixed(2)}<small>/5</small></div>
+      <div class="meter"><i style="width:${av/5*100}%;background:${c.col}"></i></div>
+      <div class="note">만족 이상 ${h}% · 응답 ${c.rows.length}건</div></div>`;
+  }).join("");
+}
+
+function drawBars(id,rows,cats,key,colors){
+  const N=rows.length; const max=Math.max(1,...cats.map(c=>count(rows,key,c)));
+  document.getElementById(id).innerHTML=cats.map(c=>{
+    const ct=count(rows,key,c);
+    return `<div class="bar-row"><span class="lbl">${c}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${ct/max*100}%;background:${colors[c]}"></div></div>
+      <span class="num">${ct}</span></div>`;
+  }).join("");
+}
+
+const ALL_AVG=avg(DATA);
+function deltaVsAll(v,type){
+  if(scope==="all") return "전체 기준";
+  const diff=v-ALL_AVG; const sign=diff>=0?"▲ +":"▼ ";
+  return `전체 대비 ${sign}${Math.abs(diff).toFixed(2)}`;
+}
+function deltaCls(v){ if(scope==="all")return"flat"; return v>=ALL_AVG?"up":"down"; }
+
+document.getElementById("seg").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  scope=b.dataset.scope;
+  [...document.querySelectorAll("#seg button")].forEach(x=>x.classList.toggle("active",x===b));
+  render();
+});
+render();
+</script>
+</body>
+</html>
