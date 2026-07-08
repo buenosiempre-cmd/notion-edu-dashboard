@@ -328,7 +328,7 @@ function render(){
   document.getElementById("negList").innerHTML = neg.length?neg.map(q=>quote(q,"neg")).join(""):`<div class="empty">표시할 의견이 없습니다.</div>`;
 }
 
-function label(r){const day="Day "+r.d; return (r.nm?r.nm:"익명")+" · "+day+" · #"+r.n;}
+function label(r){return "Day "+r.d;}
 function quote(q,cls){return `<div class="quote ${cls}">${q.t}<div class="who">${q.who}</div></div>`;}
 
 function renderCmp(){
